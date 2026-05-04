@@ -27,6 +27,14 @@
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
+        .balance-info {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 20px;
+        }
         .question-text {
             font-size: 1.4em;
             text-align: center;
@@ -34,10 +42,7 @@
             line-height: 1.4;
             color: #333;
         }
-        .options {
-            display: grid;
-            gap: 15px;
-        }
+        .options { display: grid; gap: 15px; }
         .option {
             background: #f8f9fa;
             padding: 18px;
@@ -77,28 +82,9 @@
             font-weight: bold;
             display: none;
         }
-        .result.success {
-            background: #d4edda;
-            color: #155724;
-            display: block;
-        }
-        .result.failure {
-            background: #f8d7da;
-            color: #721c24;
-            display: block;
-        }
-        .attempt-info {
-            text-align: center;
-            color: #666;
-            margin-top: 15px;
-        }
-        .back-btn {
-            display: block;
-            text-align: center;
-            margin-top: 15px;
-            color: #667eea;
-            text-decoration: none;
-        }
+        .result.success { background: #d4edda; color: #155724; display: block; }
+        .result.failure { background: #f8d7da; color: #721c24; display: block; }
+        .attempt-info { text-align: center; color: #666; margin-top: 15px; }
         @media (max-width: 480px) {
             .container { padding: 20px; }
             .question-text { font-size: 1.2em; }
@@ -107,9 +93,9 @@
     </style>
 </head>
 <body>
-    <div class="container" th:data-email="${user.email}" th:data-location="${location.index}">
-        <div class="balance-info" style="text-align: center; font-size: 1.2em; margin-bottom: 20px;">
-            💰 Твой баланс: <span th:text="${user.balance}"></span> баллов
+    <div class="container">
+        <div class="balance-info">
+            💰 Твой баланс: <span id="currentBalance">0</span> баллов
         </div>
         
         <div class="question-text">
@@ -127,14 +113,32 @@
         <button class="submit-btn" onclick="submitAnswer()">✅ Ответить</button>
         <div id="result" class="result"></div>
         <div id="attemptInfo" class="attempt-info">Попытка 1 из 2</div>
-        <a href="#" class="back-btn" id="backBtn" style="display: none;">← Вернуться на карту</a>
     </div>
     
-    <script th:inline="javascript">
-        const email = /*[[${user.email}]]*/ '';
-        const locationIndex = /*[[${location.index}]]*/ '';
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        const locationIndex = urlParams.get('locationIndex');
+        
         let attempt = 1;
         let selectedAnswer = null;
+        let currentBalance = 100;
+        
+        // Загружаем баланс
+        async function loadBalance() {
+            try {
+                const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    currentBalance = user.balance || 100;
+                    document.getElementById('currentBalance').textContent = currentBalance;
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
         
         // Выбор ответа
         document.querySelectorAll('.option').forEach(opt => {
@@ -166,7 +170,6 @@
                 resultDiv.className = 'result success';
                 resultDiv.innerHTML = `✅ Правильно! +${points} баллов! Твой баланс: ${user.balance}`;
                 
-                // Перенаправление на карту
                 setTimeout(() => {
                     window.location.href = `/map?email=${encodeURIComponent(email)}`;
                 }, 2000);
@@ -189,6 +192,8 @@
                 }
             }
         }
+        
+        loadBalance();
     </script>
 </body>
 </html>
