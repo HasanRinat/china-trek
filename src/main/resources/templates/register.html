@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация — China Trek</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 40px 30px;
+            max-width: 450px;
+            width: 100%;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 { text-align: center; margin-bottom: 30px; color: #333; }
+        input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 1em;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        a { text-align: center; display: block; margin-top: 20px; color: #667eea; text-decoration: none; }
+        @media (max-width: 480px) {
+            .container { padding: 30px 20px; }
+            input { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Регистрация</h1>
+        <input type="text" id="username" placeholder="Как вас зовут?" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <button onclick="register()">Начать приключение →</button>
+        <div id="message" class="message"></div>
+        <a href="/login">Уже есть аккаунт? Войти</a>
+    </div>
+    
+    <script>
+        async function register() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const messageDiv = document.getElementById('message');
+            
+            if (!username || !email) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = 'Заполните все поля!';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/register?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = '✅ Регистрация успешна! Перенаправление...';
+                    setTimeout(() => {
+                        window.location.href = `/map?email=${encodeURIComponent(email)}`;
+                    }, 1500);
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = 'Ошибка регистрации';
+            }
+        }
+    </script>
+</body>
+</html>
