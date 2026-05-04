@@ -6,31 +6,26 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class UserService {
-    // Хранилище пользователей в памяти
     private final ConcurrentHashMap<String, User> users = new ConcurrentHashMap<>();
     
     public User register(String email, String username) {
         if (users.containsKey(email)) {
-            return null; // Пользователь уже существует
+            System.out.println("Пользователь уже существует: " + email);
+            return null;
         }
         User user = new User(email, username);
         users.put(email, user);
+        System.out.println("Зарегистрирован: " + email + " (всего пользователей: " + users.size() + ")");
         return user;
     }
     
     public User login(String email) {
-        return users.get(email);
+        User user = users.get(email);
+        System.out.println("Вход: " + email + " -> " + (user != null ? "найден" : "не найден"));
+        return user;
     }
     
     public User getUser(String email) {
         return users.get(email);
-    }
-    
-    public User updateBalance(String email, int newBalance) {
-        User user = users.get(email);
-        if (user != null) {
-            user.setBalance(newBalance);
-        }
-        return user;
     }
 }
