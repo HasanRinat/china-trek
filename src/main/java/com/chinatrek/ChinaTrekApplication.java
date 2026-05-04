@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.*;
 
 @SpringBootApplication
+@CrossOrigin(origins = "*")    
 @RestController
 public class ChinaTrekApplication {
 
