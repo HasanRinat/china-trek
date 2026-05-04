@@ -12,10 +12,7 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
         .header {
             background: white;
             border-radius: 20px;
@@ -36,15 +33,8 @@
             font-weight: bold;
             font-size: 1.2em;
         }
-        .username {
-            color: #667eea;
-            font-weight: bold;
-        }
-        .map-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
+        .username { color: #667eea; font-weight: bold; }
+        .map-grid { display: flex; flex-direction: column; gap: 15px; }
         .location-row {
             display: flex;
             align-items: center;
@@ -75,29 +65,15 @@
             transform: scale(1.05);
             box-shadow: 0 8px 25px rgba(102,126,234,0.4);
         }
-        .location-card.current .location-name {
-            color: white;
-        }
+        .location-card.current .location-name { color: white; }
         .location-card.locked {
             cursor: not-allowed;
             background: #e0e0e0;
         }
-        .location-icon {
-            font-size: 3em;
-            margin-bottom: 10px;
-        }
-        .location-name {
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #333;
-        }
-        .location-desc {
-            font-size: 0.8em;
-            color: #666;
-        }
-        .location-card.current .location-desc {
-            color: rgba(255,255,255,0.8);
-        }
+        .location-icon { font-size: 3em; margin-bottom: 10px; }
+        .location-name { font-weight: bold; margin-bottom: 5px; color: #333; }
+        .location-desc { font-size: 0.8em; color: #666; }
+        .location-card.current .location-desc { color: rgba(255,255,255,0.8); }
         .quiz-btn {
             margin-top: 10px;
             padding: 8px 16px;
@@ -108,80 +84,144 @@
             cursor: pointer;
             font-size: 0.9em;
         }
-        .quiz-btn:hover {
-            background: #f57c00;
+        .quiz-btn:hover { background: #f57c00; }
+        
+        .locations-wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
         }
+        
         @media (max-width: 768px) {
             .location-card { min-width: 120px; padding: 15px; }
             .location-icon { font-size: 2em; }
+            .locations-wrapper { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
         }
         @media (max-width: 480px) {
             .header { flex-direction: column; text-align: center; }
-            .location-card { min-width: 100%; }
-            .location-row { flex-direction: column; }
+            .locations-wrapper { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .location-card { padding: 12px; }
+            .location-icon { font-size: 1.8em; }
         }
     </style>
 </head>
 <body>
-    <div class="container" th:data-email="${user.email}">
+    <div class="container">
         <div class="header">
             <div>
-                <span class="username" th:text="${user.username}"></span>
-                <span style="margin-left: 10px;" th:text="${user.character}"></span>
+                <span class="username" id="username">Загрузка...</span>
+                <span style="margin-left: 10px;" id="character">🐼 Панда</span>
             </div>
-            <div class="balance" id="balance">💰 <span th:text="${user.balance}"></span> баллов</div>
+            <div class="balance" id="balance">💰 <span id="balanceValue">0</span> баллов</div>
         </div>
         
-        <div class="map-grid" id="mapContainer">
-            <div th:each="loc, stat : ${locations}" class="location-row" th:if="${stat.index % 2 == 0}">
-                <div th:replace="~{::location-card(${stat.index})}" th:remove="tag"></div>
-                <div th:if="${stat.index + 1 < locations.size()}" th:replace="~{::location-card(${stat.index + 1})}" th:remove="tag"></div>
-            </div>
+        <div class="locations-wrapper" id="mapContainer">
+            <!-- Локации будут загружены через JS -->
         </div>
     </div>
     
-    <th:block th:fragment="location-card(index)">
-        <div class="location-card" 
-             th:classappend="${index <= user.currentLocationIndex ? 'unlocked' : 'locked'}"
-             th:classappend="${index == user.currentLocationIndex ? 'current' : ''}"
-             th:data-index="${index}"
-             th:data-name="${locations[index].displayName}"
-             th:data-unlocked="${index <= user.currentLocationIndex}">
-            <div class="location-icon" th:text="${locations[index].displayName.split(' ')[0]}"></div>
-            <div class="location-name" th:text="${locations[index].displayName}"></div>
-            <div class="location-desc" th:text="${locations[index].description}"></div>
-            <button th:if="${index == user.currentLocationIndex and index < locations.size() - 1}" 
-                    class="quiz-btn" th:onclick="'startQuiz(' + ${index} + ')'">
-                🎯 Пройти квиз → перейти дальше
-            </button>
-            <button th:if="${index == user.currentLocationIndex and index == locations.size() - 1}" 
-                    class="quiz-btn" style="background:#4caf50;" onclick="finishGame()">
-                🏆 Завершить путешествие
-            </button>
-        </div>
-    </th:block>
-    
-    <script th:inline="javascript">
-        const email = /*[[${user.email}]]*/ '';
+    <script>
+        // Все 11 локаций
+        const LOCATIONS = [
+            { id: 0, name: "✈️ Аэропорт", desc: "Прилёт в Пекин" },
+            { id: 1, name: "🚕 Такси", desc: "Поездка по городу" },
+            { id: 2, name: "🏨 Гостиница", desc: "Заселение" },
+            { id: 3, name: "🏯 Запретный город", desc: "Императорский дворец" },
+            { id: 4, name: "⛰️ Горы Хуаншань", desc: "Величественные пейзажи" },
+            { id: 5, name: "🐼 Зоопарк", desc: "Встреча с пандами" },
+            { id: 6, name: "🥟 Уличная еда", desc: "Пекинская утка" },
+            { id: 7, name: "🎨 Выставка", desc: "Каллиграфия" },
+            { id: 8, name: "🎁 Сувениры", desc: "Чай и шёлк" },
+            { id: 9, name: "✈️ Аэропорт", desc: "Возвращение домой" },
+            { id: 10, name: "🏁 Финиш", desc: "Путешествие завершено!" }
+        ];
         
-        async function startQuiz(locationIndex) {
-            window.location.href = `/quiz?email=${encodeURIComponent(email)}&locationIndex=${locationIndex}`;
+        // Получаем email из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        
+        let currentUser = null;
+        let currentLocationIndex = 0;
+        
+        async function loadUser() {
+            if (!email) {
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    currentUser = await response.json();
+                    document.getElementById('username').textContent = currentUser.username;
+                    document.getElementById('character').textContent = currentUser.character || '🐼 Панда';
+                    document.getElementById('balanceValue').textContent = currentUser.balance || 100;
+                    currentLocationIndex = currentUser.currentLocationIndex || 0;
+                    renderMap();
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                window.location.href = '/';
+            }
+        }
+        
+        function renderMap() {
+            const container = document.getElementById('mapContainer');
+            container.innerHTML = '';
+            
+            LOCATIONS.forEach((loc, index) => {
+                const isUnlocked = index <= currentLocationIndex;
+                const isCurrent = index === currentLocationIndex;
+                
+                const card = document.createElement('div');
+                card.className = `location-card ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="location-icon">${loc.name.split(' ')[0]}</div>
+                    <div class="location-name">${loc.name}</div>
+                    <div class="location-desc">${loc.desc}</div>
+                    ${isCurrent && index < LOCATIONS.length - 1 ? '<button class="quiz-btn" onclick="startQuiz()">🎯 Пройти квиз → перейти дальше</button>' : ''}
+                    ${isCurrent && index === LOCATIONS.length - 1 ? '<button class="quiz-btn" style="background:#4caf50;" onclick="finishGame()">🏆 Завершить путешествие</button>' : ''}
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        function startQuiz() {
+            window.location.href = `/quiz?email=${encodeURIComponent(email)}&locationIndex=${currentLocationIndex}`;
         }
         
         function finishGame() {
             alert('🎉 Поздравляем! Вы завершили путешествие по Китаю! 🎉\nСпасибо за игру!');
         }
         
-        // Обновление баланса на странице
+        // Обновляем баланс каждые 3 секунды
         async function updateBalance() {
-            const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
-                method: 'POST'
-            });
-            const user = await response.json();
-            document.getElementById('balance').innerHTML = '💰 ' + user.balance + ' баллов';
+            if (!email) return;
+            try {
+                const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('balanceValue').textContent = user.balance || 100;
+                    if (user.currentLocationIndex !== currentLocationIndex) {
+                        currentLocationIndex = user.currentLocationIndex;
+                        renderMap();
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка обновления баланса:', error);
+            }
         }
         
-        // Проверяем баланс каждые 3 секунды
+        loadUser();
         setInterval(updateBalance, 3000);
     </script>
 </body>
