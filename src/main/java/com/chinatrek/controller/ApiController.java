@@ -14,20 +14,22 @@ public class ApiController {
 
     @PostMapping("/register")
     public User register(@RequestParam String email, @RequestParam String username) {
-        System.out.println("=== РЕГИСТРАЦИЯ ===");
+        System.out.println("✅✅✅ ApiController РАБОТАЕТ! ✅✅✅");
         System.out.println("Email: " + email);
         System.out.println("Username: " + username);
         User user = userService.register(email, username);
-        System.out.println("Результат: " + (user != null ? "Успех" : "Ошибка"));
         return user;
     }
 
     @PostMapping("/login")
     public User login(@RequestParam String email) {
-        System.out.println("=== ВХОД ===");
-        System.out.println("Email: " + email);
-        User user = userService.login(email);
-        System.out.println("Результат: " + (user != null ? "Найден" : "Не найден"));
-        return user;
+        System.out.println("🔐 Login вызван: " + email);
+        return userService.login(email);
+    }
+    
+    // Тестовый эндпоинт - проверяем, что контроллер вообще загрузился
+    @GetMapping("/test")
+    public String test() {
+        return "API работает!";
     }
 }
