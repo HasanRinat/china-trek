@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Квиз — China Trek</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .question-text {
+            font-size: 1.4em;
+            text-align: center;
+            margin: 30px 0;
+            line-height: 1.4;
+            color: #333;
+        }
+        .options {
+            display: grid;
+            gap: 15px;
+        }
+        .option {
+            background: #f8f9fa;
+            padding: 18px;
+            border-radius: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            font-size: 1.1em;
+        }
+        .option:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        .option.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f0f0ff, #fff);
+        }
+        .submit-btn {
+            width: 100%;
+            margin-top: 30px;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .submit-btn:hover { transform: translateY(-2px); }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 20px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        .result.failure {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        .attempt-info {
+            text-align: center;
+            color: #666;
+            margin-top: 15px;
+        }
+        .back-btn {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 20px; }
+            .question-text { font-size: 1.2em; }
+            .option { padding: 14px; font-size: 1em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" th:data-email="${user.email}" th:data-location="${location.index}">
+        <div class="balance-info" style="text-align: center; font-size: 1.2em; margin-bottom: 20px;">
+            💰 Твой баланс: <span th:text="${user.balance}"></span> баллов
+        </div>
+        
+        <div class="question-text">
+            <div style="font-size: 4em; margin-bottom: 10px;">🇨🇳</div>
+            Как сказать "Привет" по-китайски?
+        </div>
+        
+        <div class="options">
+            <div class="option" data-answer="nihaoma">А) Нихао ма?</div>
+            <div class="option" data-answer="nihaoyou">Б) Нихао ю?</div>
+            <div class="option" data-answer="nihao">В) Нихао</div>
+            <div class="option" data-answer="zaijian">Г) Зайцзянь</div>
+        </div>
+        
+        <button class="submit-btn" onclick="submitAnswer()">✅ Ответить</button>
+        <div id="result" class="result"></div>
+        <div id="attemptInfo" class="attempt-info">Попытка 1 из 2</div>
+        <a href="#" class="back-btn" id="backBtn" style="display: none;">← Вернуться на карту</a>
+    </div>
+    
+    <script th:inline="javascript">
+        const email = /*[[${user.email}]]*/ '';
+        const locationIndex = /*[[${location.index}]]*/ '';
+        let attempt = 1;
+        let selectedAnswer = null;
+        
+        // Выбор ответа
+        document.querySelectorAll('.option').forEach(opt => {
+            opt.addEventListener('click', function() {
+                document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedAnswer = this.getAttribute('data-answer');
+            });
+        });
+        
+        async function submitAnswer() {
+            if (!selectedAnswer) {
+                alert('Выберите ответ!');
+                return;
+            }
+            
+            const correctAnswer = 'nihao';
+            const resultDiv = document.getElementById('result');
+            const attemptInfo = document.getElementById('attemptInfo');
+            
+            if (selectedAnswer === correctAnswer) {
+                // Правильный ответ
+                const response = await fetch(`/api/answer?email=${encodeURIComponent(email)}&attempt=${attempt}`, {
+                    method: 'POST'
+                });
+                const user = await response.json();
+                
+                let points = attempt === 1 ? 10 : 5;
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ Правильно! +${points} баллов! Твой баланс: ${user.balance}`;
+                
+                // Перенаправление на карту
+                setTimeout(() => {
+                    window.location.href = `/map?email=${encodeURIComponent(email)}`;
+                }, 2000);
+            } else {
+                // Неправильный ответ
+                if (attempt === 2) {
+                    resultDiv.className = 'result failure';
+                    resultDiv.innerHTML = '❌ Неправильно! Правильный ответ: "Нихао". Ты не получил баллов.';
+                    setTimeout(() => {
+                        window.location.href = `/map?email=${encodeURIComponent(email)}`;
+                    }, 2000);
+                } else {
+                    attempt++;
+                    attemptInfo.textContent = `Попытка ${attempt} из 2`;
+                    resultDiv.className = 'result failure';
+                    resultDiv.innerHTML = '❌ Неправильно! Попробуй ещё раз.';
+                    setTimeout(() => {
+                        resultDiv.style.display = 'none';
+                    }, 1500);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
