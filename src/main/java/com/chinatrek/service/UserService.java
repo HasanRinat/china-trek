@@ -28,4 +28,7 @@ public class UserService {
     public User getUser(String email) {
         return users.get(email);
     }
+    public User updateUser(User user) {
+    return userRepository.save(user);
+}
 }
