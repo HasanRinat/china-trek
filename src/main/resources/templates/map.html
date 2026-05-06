@@ -119,29 +119,27 @@
             <!-- Локации будут загружены через JS -->
         </div>
     </div>
-    
     <script>
     const LOCATIONS = [
-        { id: 0, name: "✈️ Аэропорт", desc: "Прилёт в Пекин" },
-        { id: 1, name: "🚕 Такси", desc: "Поездка по городу" },
-        { id: 2, name: "🏨 Гостиница", desc: "Заселение" },
-        { id: 3, name: "🏯 Запретный город", desc: "Императорский дворец" },
-        { id: 4, name: "⛰️ Горы Хуаншань", desc: "Величественные пейзажи" },
-        { id: 5, name: "🐼 Зоопарк", desc: "Встреча с пандами" },
-        { id: 6, name: "🥟 Уличная еда", desc: "Пекинская утка" },
-        { id: 7, name: "🎨 Выставка", desc: "Каллиграфия" },
-        { id: 8, name: "🎁 Сувениры", desc: "Чай и шёлк" },
-        { id: 9, name: "✈️ Аэропорт", desc: "Возвращение домой" },
-        { id: 10, name: "🏁 Финиш", desc: "Путешествие завершено!" }
+        { id: 0, name: "✈️ Аэропорт", desc: "Прилёт в Пекин", quizDone: false },
+        { id: 1, name: "🚕 Такси", desc: "Поездка по городу", quizDone: false },
+        { id: 2, name: "🏨 Гостиница", desc: "Заселение", quizDone: false },
+        { id: 3, name: "🏯 Запретный город", desc: "Императорский дворец", quizDone: false },
+        { id: 4, name: "⛰️ Горы Хуаншань", desc: "Величественные пейзажи", quizDone: false },
+        { id: 5, name: "🐼 Зоопарк", desc: "Встреча с пандами", quizDone: false },
+        { id: 6, name: "🥟 Уличная еда", desc: "Пекинская утка", quizDone: false },
+        { id: 7, name: "🎨 Выставка", desc: "Каллиграфия", quizDone: false },
+        { id: 8, name: "🎁 Сувениры", desc: "Чай и шёлк", quizDone: false },
+        { id: 9, name: "✈️ Аэропорт", desc: "Возвращение домой", quizDone: false },
+        { id: 10, name: "🏁 Финиш", desc: "Путешествие завершено!", quizDone: false }
     ];
     
     const urlParams = new URLSearchParams(window.location.search);
     const email = urlParams.get('email');
-    
-    let currentUser = null;
     let currentLocationIndex = 0;
+    let currentBalance = 100;
     
-    async function loadUser() {
+    async function loadGameState() {
         if (!email) {
             window.location.href = '/';
             return;
@@ -153,37 +151,44 @@
             });
             
             if (response.ok) {
-                currentUser = await response.json();
-                document.getElementById('username').textContent = currentUser.username;
-                document.getElementById('balanceValue').textContent = currentUser.balance;
-                currentLocationIndex = currentUser.currentLocationIndex || 0;
+                const user = await response.json();
+                document.getElementById('username').innerHTML = user.username;
+                document.getElementById('balanceValue').innerHTML = user.balance;
+                currentLocationIndex = user.currentLocationIndex || 0;
+                currentBalance = user.balance || 100;
                 renderMap();
             } else {
+                console.log("Пользователь не найден, перенаправление на регистрацию");
                 window.location.href = '/';
             }
         } catch (error) {
-            console.error('Ошибка:', error);
+            console.error('Ошибка загрузки:', error);
         }
     }
     
     function renderMap() {
         const container = document.getElementById('mapContainer');
+        if (!container) return;
+        
         container.innerHTML = '';
         
         LOCATIONS.forEach((loc, index) => {
-            const isUnlocked = index <= currentLocationIndex;
+            const isLocked = index > currentLocationIndex;
             const isCurrent = index === currentLocationIndex;
+            const isLast = index === LOCATIONS.length - 1;
             
             const card = document.createElement('div');
-            card.className = `location-card ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`;
+            card.className = `location-card ${isLocked ? 'locked' : 'unlocked'} ${isCurrent ? 'current' : ''}`;
             
             let buttonHtml = '';
-            if (isCurrent && index < LOCATIONS.length - 1) {
-                // Если это последний пройденный квиз (локация завершена), показываем "Следующая локация"
-                buttonHtml = '<button class="quiz-btn" onclick="moveToNext()">🚀 Перейти дальше</button>';
-            } else if (isCurrent && index === 0) {
-                // Первая локация — показываем "Пройти квиз"
-                buttonHtml = '<button class="quiz-btn" onclick="startQuiz()">🎯 Пройти квиз</button>';
+            if (isCurrent && !isLast) {
+                // Кнопка для текущей локации
+                buttonHtml = `<button class="quiz-btn" onclick="startQuiz(${index})">🎯 Пройти квиз</button>`;
+            } else if (isCurrent && isLast) {
+                buttonHtml = `<button class="quiz-btn" style="background:#4caf50;" onclick="finishGame()">🏆 Завершить</button>`;
+            } else if (index === currentLocationIndex - 1 && LOCATIONS[currentLocationIndex - 1]?.quizDone) {
+                // Если предыдущая локация пройдена, показываем "Перейти"
+                buttonHtml = `<button class="quiz-btn" onclick="moveToNext()">🚀 Перейти на следующий уровень</button>`;
             }
             
             card.innerHTML = `
@@ -197,13 +202,13 @@
         });
     }
     
-    async function startQuiz() {
-        // Сохраняем в localStorage, что мы на этой локации
-        localStorage.setItem('quizLocationIndex', currentLocationIndex);
-        window.location.href = `/quiz?email=${encodeURIComponent(email)}&locationIndex=${currentLocationIndex}`;
+    async function startQuiz(locationIndex) {
+        console.log("Запуск квиза для локации:", locationIndex);
+        window.location.href = `/quiz?email=${encodeURIComponent(email)}&locationIndex=${locationIndex}`;
     }
     
     async function moveToNext() {
+        console.log("Переход на следующую локацию");
         try {
             const response = await fetch(`/api/completeQuiz?email=${encodeURIComponent(email)}`, {
                 method: 'POST'
@@ -211,51 +216,56 @@
             
             if (response.ok) {
                 const user = await response.json();
-                currentUser = user;
+                console.log("Ответ сервера:", user);
                 currentLocationIndex = user.currentLocationIndex;
-                document.getElementById('balanceValue').textContent = user.balance;
+                currentBalance = user.balance;
+                document.getElementById('balanceValue').innerHTML = user.balance;
+                
+                // Отмечаем предыдущую локацию как пройденную
+                if (currentLocationIndex > 0) {
+                    LOCATIONS[currentLocationIndex - 1].quizDone = true;
+                }
+                
                 renderMap();
                 
-                // Если игра не закончена, показываем следующий квиз
                 if (currentLocationIndex < LOCATIONS.length) {
                     setTimeout(() => {
-                        if (confirm('Переход выполнен! Пройти следующий квиз?')) {
-                            startQuiz();
+                        if (confirm('✅ Переход выполнен! Пройти квиз на новой локации?')) {
+                            startQuiz(currentLocationIndex);
                         }
                     }, 500);
-                } else {
-                    alert('🎉 Поздравляем! Вы завершили путешествие!');
                 }
             } else {
-                alert('Ошибка перехода! Недостаточно баллов?');
+                const error = await response.text();
+                console.error("Ошибка перехода:", error);
+                alert('❌ Ошибка перехода! Недостаточно баллов?');
             }
         } catch (error) {
             console.error('Ошибка:', error);
-            alert('Ошибка подключения');
+            alert('Ошибка подключения к серверу');
         }
     }
     
-    async function updateBalance() {
-        if (!email) return;
-        try {
-            const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
-                method: 'POST'
-            });
-            if (response.ok) {
-                const user = await response.json();
-                document.getElementById('balanceValue').textContent = user.balance;
-                if (user.currentLocationIndex !== currentLocationIndex) {
-                    currentLocationIndex = user.currentLocationIndex;
-                    renderMap();
+    function finishGame() {
+        alert('🎉 Поздравляем! Вы прошли China Trek! 🎉');
+    }
+    
+    // Загружаем состояние игры
+    loadGameState();
+    
+    // Обновляем баланс каждые 3 секунды
+    setInterval(() => {
+        fetch(`/api/login?email=${encodeURIComponent(email)}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(user => {
+                if (user && user.balance !== currentBalance) {
+                    currentBalance = user.balance;
+                    document.getElementById('balanceValue').innerHTML = user.balance;
                 }
-            }
-        } catch (error) {
-            console.error('Ошибка обновления баланса:', error);
-        }
-    }
-    
-    loadUser();
-    setInterval(updateBalance, 3000);
+            })
+            .catch(err => console.error("Ошибка обновления:", err));
+    }, 3000);
 </script>
+   
 </body>
 </html>
