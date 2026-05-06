@@ -84,6 +84,7 @@
         }
         .result.success { background: #d4edda; color: #155724; display: block; }
         .result.failure { background: #f8d7da; color: #721c24; display: block; }
+        .result.info { background: #cce5ff; color: #004085; display: block; }
         .attempt-info { text-align: center; color: #666; margin-top: 15px; }
         @media (max-width: 480px) {
             .container { padding: 20px; }
@@ -122,10 +123,15 @@
         
         let attempt = 1;
         let selectedAnswer = null;
-        let currentBalance = 100;
+        let currentBalance = 0;
         
         // Загружаем баланс
         async function loadBalance() {
+            if (!email) {
+                window.location.href = '/';
+                return;
+            }
+            
             try {
                 const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
                     method: 'POST'
@@ -134,9 +140,11 @@
                     const user = await response.json();
                     currentBalance = user.balance || 100;
                     document.getElementById('currentBalance').textContent = currentBalance;
+                } else {
+                    window.location.href = '/';
                 }
             } catch (error) {
-                console.error('Ошибка:', error);
+                console.error('Ошибка загрузки баланса:', error);
             }
         }
         
@@ -150,50 +158,98 @@
         });
         
         async function submitAnswer() {
-    if (!selectedAnswer) {
-        alert('Выберите ответ!');
-        return;
-    }
-    
-    const correctAnswer = 'nihao';
-    const resultDiv = document.getElementById('result');
-    const attemptInfo = document.getElementById('attemptInfo');
-    
-    if (selectedAnswer === correctAnswer) {
-        // Правильный ответ — начисляем баллы
-        const response = await fetch(`/api/answer?email=${encodeURIComponent(email)}&attempt=${attempt}`, {
-            method: 'POST'
-        });
-        const user = await response.json();
-        
-        let points = attempt === 1 ? 10 : 5;
-        resultDiv.className = 'result success';
-        resultDiv.innerHTML = `✅ Правильно! +${points} баллов! Баланс: ${user.balance}`;
-        
-        // Возвращаемся на карту, где теперь есть кнопка "Перейти дальше"
-        setTimeout(() => {
-            window.location.href = `/map?email=${encodeURIComponent(email)}`;
-        }, 1500);
-    } else {
-        // Неправильный ответ
-        if (attempt === 2) {
-            resultDiv.className = 'result failure';
-            resultDiv.innerHTML = '❌ Неправильно! Правильный ответ: "Нихао". 0 баллов.';
-            setTimeout(() => {
-                window.location.href = `/map?email=${encodeURIComponent(email)}`;
-            }, 2000);
-        } else {
-            attempt++;
-            attemptInfo.textContent = `Попытка ${attempt} из 2`;
-            resultDiv.className = 'result failure';
-            resultDiv.innerHTML = '❌ Неправильно! Попробуй ещё раз.';
-            setTimeout(() => {
-                resultDiv.style.display = 'none';
-            }, 1500);
+            if (!selectedAnswer) {
+                alert('Выберите ответ!');
+                return;
+            }
+            
+            const correctAnswer = 'nihao';
+            const resultDiv = document.getElementById('result');
+            const attemptInfo = document.getElementById('attemptInfo');
+            
+            // БЛОК ДЛЯ ПРАВИЛЬНОГО ОТВЕТА
+            if (selectedAnswer === correctAnswer) {
+                console.log("Правильный ответ! Попытка:", attempt);
+                
+                // 1. Начисляем баллы за ответ
+                const answerResponse = await fetch(`/api/answer?email=${encodeURIComponent(email)}&attempt=${attempt}`, {
+                    method: 'POST'
+                });
+                
+                if (!answerResponse.ok) {
+                    console.error("Ошибка при начислении баллов");
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = '❌ Ошибка сервера. Попробуйте позже.';
+                    return;
+                }
+                
+                const user = await answerResponse.json();
+                let points = attempt === 1 ? 10 : 5;
+                
+                console.log("Начислено баллов:", points);
+                console.log("Новый баланс:", user.balance);
+                
+                // 2. Автоматически завершаем квиз и переходим на следующую локацию
+                const completeResponse = await fetch(`/api/completeQuiz?email=${encodeURIComponent(email)}`, {
+                    method: 'POST'
+                });
+                
+                if (completeResponse.ok) {
+                    const updatedUser = await completeResponse.json();
+                    console.log("Переход на локацию:", updatedUser.currentLocationIndex);
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ Правильно! +${points} баллов! Переход на следующую локацию...`;
+                    
+                    // Отключаем кнопку, чтобы не нажали дважды
+                    document.querySelector('.submit-btn').disabled = true;
+                    
+                    setTimeout(() => {
+                        window.location.href = `/map?email=${encodeURIComponent(email)}`;
+                    }, 1500);
+                } else {
+                    console.error("Ошибка при завершении квиза");
+                    resultDiv.className = 'result failure';
+                    resultDiv.innerHTML = '❌ Ошибка перехода. Попробуйте ещё раз.';
+                }
+            } 
+            // БЛОК ДЛЯ НЕПРАВИЛЬНОГО ОТВЕТА
+            else {
+                console.log("Неправильный ответ. Попытка:", attempt);
+                
+                if (attempt >= 2) {
+                    // Вторая попытка неправильная — завершаем с 0 баллов
+                    resultDiv.className = 'result failure';
+                    resultDiv.innerHTML = '❌ Неправильно! Правильный ответ: "Нихао". 0 баллов. Переход на карту...';
+                    
+                    // Всё равно завершаем квиз (без начисления баллов)
+                    await fetch(`/api/completeQuiz?email=${encodeURIComponent(email)}`, {
+                        method: 'POST'
+                    });
+                    
+                    setTimeout(() => {
+                        window.location.href = `/map?email=${encodeURIComponent(email)}`;
+                    }, 2000);
+                } else {
+                    // Первая попытка неправильная — даём вторую попытку
+                    attempt++;
+                    attemptInfo.textContent = `Попытка ${attempt} из 2`;
+                    resultDiv.className = 'result failure';
+                    resultDiv.innerHTML = '❌ Неправильно! Попробуй ещё раз.';
+                    
+                    // Очищаем выбранный ответ для следующей попытки
+                    selectedAnswer = null;
+                    document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+                    
+                    setTimeout(() => {
+                        resultDiv.style.display = 'none';
+                        setTimeout(() => { resultDiv.style.display = ''; }, 100);
+                    }, 1500);
+                }
+            }
         }
-    }
-}
         
+        // Загружаем баланс при старте
         loadBalance();
     </script>
 </body>
