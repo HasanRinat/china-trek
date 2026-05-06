@@ -121,108 +121,141 @@
     </div>
     
     <script>
-        // Все 11 локаций
-        const LOCATIONS = [
-            { id: 0, name: "✈️ Аэропорт", desc: "Прилёт в Пекин" },
-            { id: 1, name: "🚕 Такси", desc: "Поездка по городу" },
-            { id: 2, name: "🏨 Гостиница", desc: "Заселение" },
-            { id: 3, name: "🏯 Запретный город", desc: "Императорский дворец" },
-            { id: 4, name: "⛰️ Горы Хуаншань", desc: "Величественные пейзажи" },
-            { id: 5, name: "🐼 Зоопарк", desc: "Встреча с пандами" },
-            { id: 6, name: "🥟 Уличная еда", desc: "Пекинская утка" },
-            { id: 7, name: "🎨 Выставка", desc: "Каллиграфия" },
-            { id: 8, name: "🎁 Сувениры", desc: "Чай и шёлк" },
-            { id: 9, name: "✈️ Аэропорт", desc: "Возвращение домой" },
-            { id: 10, name: "🏁 Финиш", desc: "Путешествие завершено!" }
-        ];
-        
-        // Получаем email из URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const email = urlParams.get('email');
-        
-        let currentUser = null;
-        let currentLocationIndex = 0;
-        
-        async function loadUser() {
-            if (!email) {
-                window.location.href = '/';
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    currentUser = await response.json();
-                    document.getElementById('username').textContent = currentUser.username;
-                    document.getElementById('character').textContent = currentUser.character || '🐼 Панда';
-                    document.getElementById('balanceValue').textContent = currentUser.balance || 100;
-                    currentLocationIndex = currentUser.currentLocationIndex || 0;
-                    renderMap();
-                } else {
-                    window.location.href = '/';
-                }
-            } catch (error) {
-                console.error('Ошибка:', error);
-                window.location.href = '/';
-            }
+    const LOCATIONS = [
+        { id: 0, name: "✈️ Аэропорт", desc: "Прилёт в Пекин" },
+        { id: 1, name: "🚕 Такси", desc: "Поездка по городу" },
+        { id: 2, name: "🏨 Гостиница", desc: "Заселение" },
+        { id: 3, name: "🏯 Запретный город", desc: "Императорский дворец" },
+        { id: 4, name: "⛰️ Горы Хуаншань", desc: "Величественные пейзажи" },
+        { id: 5, name: "🐼 Зоопарк", desc: "Встреча с пандами" },
+        { id: 6, name: "🥟 Уличная еда", desc: "Пекинская утка" },
+        { id: 7, name: "🎨 Выставка", desc: "Каллиграфия" },
+        { id: 8, name: "🎁 Сувениры", desc: "Чай и шёлк" },
+        { id: 9, name: "✈️ Аэропорт", desc: "Возвращение домой" },
+        { id: 10, name: "🏁 Финиш", desc: "Путешествие завершено!" }
+    ];
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const email = urlParams.get('email');
+    
+    let currentUser = null;
+    let currentLocationIndex = 0;
+    
+    async function loadUser() {
+        if (!email) {
+            window.location.href = '/';
+            return;
         }
         
-        function renderMap() {
-            const container = document.getElementById('mapContainer');
-            container.innerHTML = '';
-            
-            LOCATIONS.forEach((loc, index) => {
-                const isUnlocked = index <= currentLocationIndex;
-                const isCurrent = index === currentLocationIndex;
-                
-                const card = document.createElement('div');
-                card.className = `location-card ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`;
-                
-                card.innerHTML = `
-                    <div class="location-icon">${loc.name.split(' ')[0]}</div>
-                    <div class="location-name">${loc.name}</div>
-                    <div class="location-desc">${loc.desc}</div>
-                    ${isCurrent && index < LOCATIONS.length - 1 ? '<button class="quiz-btn" onclick="startQuiz()">🎯 Пройти квиз → перейти дальше</button>' : ''}
-                    ${isCurrent && index === LOCATIONS.length - 1 ? '<button class="quiz-btn" style="background:#4caf50;" onclick="finishGame()">🏆 Завершить путешествие</button>' : ''}
-                `;
-                
-                container.appendChild(card);
+        try {
+            const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
+                method: 'POST'
             });
-        }
-        
-        function startQuiz() {
-            window.location.href = `/quiz?email=${encodeURIComponent(email)}&locationIndex=${currentLocationIndex}`;
-        }
-        
-        function finishGame() {
-            alert('🎉 Поздравляем! Вы завершили путешествие по Китаю! 🎉\nСпасибо за игру!');
-        }
-        
-        // Обновляем баланс каждые 3 секунды
-        async function updateBalance() {
-            if (!email) return;
-            try {
-                const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
-                    method: 'POST'
-                });
-                if (response.ok) {
-                    const user = await response.json();
-                    document.getElementById('balanceValue').textContent = user.balance || 100;
-                    if (user.currentLocationIndex !== currentLocationIndex) {
-                        currentLocationIndex = user.currentLocationIndex;
-                        renderMap();
-                    }
-                }
-            } catch (error) {
-                console.error('Ошибка обновления баланса:', error);
+            
+            if (response.ok) {
+                currentUser = await response.json();
+                document.getElementById('username').textContent = currentUser.username;
+                document.getElementById('balanceValue').textContent = currentUser.balance;
+                currentLocationIndex = currentUser.currentLocationIndex || 0;
+                renderMap();
+            } else {
+                window.location.href = '/';
             }
+        } catch (error) {
+            console.error('Ошибка:', error);
         }
+    }
+    
+    function renderMap() {
+        const container = document.getElementById('mapContainer');
+        container.innerHTML = '';
         
-        loadUser();
-        setInterval(updateBalance, 3000);
-    </script>
+        LOCATIONS.forEach((loc, index) => {
+            const isUnlocked = index <= currentLocationIndex;
+            const isCurrent = index === currentLocationIndex;
+            
+            const card = document.createElement('div');
+            card.className = `location-card ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''}`;
+            
+            let buttonHtml = '';
+            if (isCurrent && index < LOCATIONS.length - 1) {
+                // Если это последний пройденный квиз (локация завершена), показываем "Следующая локация"
+                buttonHtml = '<button class="quiz-btn" onclick="moveToNext()">🚀 Перейти дальше</button>';
+            } else if (isCurrent && index === 0) {
+                // Первая локация — показываем "Пройти квиз"
+                buttonHtml = '<button class="quiz-btn" onclick="startQuiz()">🎯 Пройти квиз</button>';
+            }
+            
+            card.innerHTML = `
+                <div class="location-icon">${loc.name.split(' ')[0]}</div>
+                <div class="location-name">${loc.name}</div>
+                <div class="location-desc">${loc.desc}</div>
+                ${buttonHtml}
+            `;
+            
+            container.appendChild(card);
+        });
+    }
+    
+    async function startQuiz() {
+        // Сохраняем в localStorage, что мы на этой локации
+        localStorage.setItem('quizLocationIndex', currentLocationIndex);
+        window.location.href = `/quiz?email=${encodeURIComponent(email)}&locationIndex=${currentLocationIndex}`;
+    }
+    
+    async function moveToNext() {
+        try {
+            const response = await fetch(`/api/completeQuiz?email=${encodeURIComponent(email)}`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                const user = await response.json();
+                currentUser = user;
+                currentLocationIndex = user.currentLocationIndex;
+                document.getElementById('balanceValue').textContent = user.balance;
+                renderMap();
+                
+                // Если игра не закончена, показываем следующий квиз
+                if (currentLocationIndex < LOCATIONS.length) {
+                    setTimeout(() => {
+                        if (confirm('Переход выполнен! Пройти следующий квиз?')) {
+                            startQuiz();
+                        }
+                    }, 500);
+                } else {
+                    alert('🎉 Поздравляем! Вы завершили путешествие!');
+                }
+            } else {
+                alert('Ошибка перехода! Недостаточно баллов?');
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            alert('Ошибка подключения');
+        }
+    }
+    
+    async function updateBalance() {
+        if (!email) return;
+        try {
+            const response = await fetch(`/api/login?email=${encodeURIComponent(email)}`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                const user = await response.json();
+                document.getElementById('balanceValue').textContent = user.balance;
+                if (user.currentLocationIndex !== currentLocationIndex) {
+                    currentLocationIndex = user.currentLocationIndex;
+                    renderMap();
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка обновления баланса:', error);
+        }
+    }
+    
+    loadUser();
+    setInterval(updateBalance, 3000);
+</script>
 </body>
 </html>
