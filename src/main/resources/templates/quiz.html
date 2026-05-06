@@ -150,48 +150,49 @@
         });
         
         async function submitAnswer() {
-            if (!selectedAnswer) {
-                alert('Выберите ответ!');
-                return;
-            }
-            
-            const correctAnswer = 'nihao';
-            const resultDiv = document.getElementById('result');
-            const attemptInfo = document.getElementById('attemptInfo');
-            
-            if (selectedAnswer === correctAnswer) {
-                // Правильный ответ
-                const response = await fetch(`/api/answer?email=${encodeURIComponent(email)}&attempt=${attempt}`, {
-                    method: 'POST'
-                });
-                const user = await response.json();
-                
-                let points = attempt === 1 ? 10 : 5;
-                resultDiv.className = 'result success';
-                resultDiv.innerHTML = `✅ Правильно! +${points} баллов! Твой баланс: ${user.balance}`;
-                
-                setTimeout(() => {
-                    window.location.href = `/map?email=${encodeURIComponent(email)}`;
-                }, 2000);
-            } else {
-                // Неправильный ответ
-                if (attempt === 2) {
-                    resultDiv.className = 'result failure';
-                    resultDiv.innerHTML = '❌ Неправильно! Правильный ответ: "Нихао". Ты не получил баллов.';
-                    setTimeout(() => {
-                        window.location.href = `/map?email=${encodeURIComponent(email)}`;
-                    }, 2000);
-                } else {
-                    attempt++;
-                    attemptInfo.textContent = `Попытка ${attempt} из 2`;
-                    resultDiv.className = 'result failure';
-                    resultDiv.innerHTML = '❌ Неправильно! Попробуй ещё раз.';
-                    setTimeout(() => {
-                        resultDiv.style.display = 'none';
-                    }, 1500);
-                }
-            }
+    if (!selectedAnswer) {
+        alert('Выберите ответ!');
+        return;
+    }
+    
+    const correctAnswer = 'nihao';
+    const resultDiv = document.getElementById('result');
+    const attemptInfo = document.getElementById('attemptInfo');
+    
+    if (selectedAnswer === correctAnswer) {
+        // Правильный ответ — начисляем баллы
+        const response = await fetch(`/api/answer?email=${encodeURIComponent(email)}&attempt=${attempt}`, {
+            method: 'POST'
+        });
+        const user = await response.json();
+        
+        let points = attempt === 1 ? 10 : 5;
+        resultDiv.className = 'result success';
+        resultDiv.innerHTML = `✅ Правильно! +${points} баллов! Баланс: ${user.balance}`;
+        
+        // Возвращаемся на карту, где теперь есть кнопка "Перейти дальше"
+        setTimeout(() => {
+            window.location.href = `/map?email=${encodeURIComponent(email)}`;
+        }, 1500);
+    } else {
+        // Неправильный ответ
+        if (attempt === 2) {
+            resultDiv.className = 'result failure';
+            resultDiv.innerHTML = '❌ Неправильно! Правильный ответ: "Нихао". 0 баллов.';
+            setTimeout(() => {
+                window.location.href = `/map?email=${encodeURIComponent(email)}`;
+            }, 2000);
+        } else {
+            attempt++;
+            attemptInfo.textContent = `Попытка ${attempt} из 2`;
+            resultDiv.className = 'result failure';
+            resultDiv.innerHTML = '❌ Неправильно! Попробуй ещё раз.';
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 1500);
         }
+    }
+}
         
         loadBalance();
     </script>
